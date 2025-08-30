@@ -1,0 +1,228 @@
+openapi: 3.1.0
+info:
+  title: Mahaguru AI API
+  description: |
+    This is the API documentation for Mahaguru AI, an AI-powered learning platform.
+    
+    ## Authentication
+    This API uses JWT for authentication. Include the token in the `Authorization` header:
+    ```
+    Authorization: Bearer <token>
+    ```
+  version: 1.0.0
+  contact:
+    name: Mahaguru AI Team
+    email: support@mahaguru.ai
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.mahaguru.ai/v1
+    description: Production server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    HTTPValidationError:
+      type: object
+      properties:
+        detail:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+    ValidationError:
+      type: object
+      properties:
+        loc:
+          type: array
+          items:
+            type: string
+          example: ["body", "field_name"]
+        msg:
+          type: string
+          example: "Field required"
+        type:
+          type: string
+          example: "missing"
+    QueryRequest:
+      type: object
+      required:
+        - user_id
+        - query
+      properties:
+        user_id:
+          type: string
+          description: Unique identifier for the user
+          example: "user_123"
+        query:
+          type: string
+          description: The user's query
+          example: "What is machine learning?"
+        context:
+          type: object
+          description: Additional context for the query
+          example: {"course_id": "ml101"}
+    QueryResponse:
+      type: object
+      properties:
+        response:
+          type: string
+          description: The AI's response to the query
+          example: "Machine learning is a branch of AI that enables systems to learn from data..."
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+                example: "Introduction to Machine Learning"
+              url:
+                type: string
+                example: "/materials/ml101/chapter1"
+    PDFUploadRequest:
+      type: object
+      required:
+        - file
+        - metadata
+      properties:
+        file:
+          type: string
+          format: binary
+          description: PDF file to upload
+        metadata:
+          type: object
+          properties:
+            title:
+              type: string
+              example: "Introduction to AI"
+            description:
+              type: string
+              example: "A comprehensive guide to AI fundamentals"
+            tags:
+              type: array
+              items:
+                type: string
+              example: ["AI", "Machine Learning", "Beginner"]
+    ProgressResponse:
+      type: object
+      properties:
+        user_id:
+          type: string
+          example: "user_123"
+        total_queries:
+          type: integer
+          example: 42
+        last_active:
+          type: string
+          format: date-time
+          example: "2023-10-27T14:30:00Z"
+        courses_completed:
+          type: array
+          items:
+            type: string
+          example: ["ml101", "python101"]
+        learning_path:
+          type: array
+          items:
+            type: string
+          example: ["ml101", "python101", "dl201"]
+
+paths:
+  /query:
+    post:
+      tags: [AI]
+      summary: Submit a query to the AI
+      description: Submit a natural language query and receive an AI-generated response
+      operationId: query_ai
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+        - BearerAuth: []
+
+  /upload_pdf:
+    post:
+      tags: [Documents]
+      summary: Upload a PDF document
+      description: Upload a PDF file for processing and indexing
+      operationId: upload_pdf
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PDFUploadRequest'
+      responses:
+        '200':
+          description: Successful Upload
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  document_id:
+                    type: string
+                    example: "doc_123"
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+        - BearerAuth: []
+
+  /progress/{user_id}:
+    get:
+      tags: [Progress]
+      summary: Get user progress
+      description: Retrieve learning progress and statistics for a user
+      operationId: get_user_progress
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The user ID to get progress for
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressResponse'
+        '404':
+          description: User not found
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+        - BearerAuth: []
